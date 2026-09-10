@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麺Earth // 処罰記録システム</title>
+<style>
+  :root{
+    --bg:#050810;
+    --bg2:#0a1120;
+    --panel:#0d1626;
+    --line:#1c3a52;
+    --line-bright:#2aa9c9;
+    --cyan:#39e0ff;
+    --cyan-dim:#1a8fa8;
+    --magenta:#ff3ec8;
+    --amber:#ffb020;
+    --red:#ff3b5c;
+    --green:#39ff8f;
+    --text:#d8f4ff;
+    --text-dim:#6b8fa3;
+    --font: 'Segoe UI', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    --mono: 'Consolas', 'SFMono-Regular', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(57,224,255,0.08), transparent 50%),
+      radial-gradient(ellipse at 80% 110%, rgba(255,62,200,0.06), transparent 50%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font);
+    min-height:100vh;
+    background-attachment:fixed;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(57,224,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(57,224,255,0.035) 1px, transparent 1px);
+    background-size:38px 38px;
+    pointer-events:none;
+    z-index:0;
+  }
+  .wrap{position:relative; z-index:1; max-width:1100px; margin:0 auto; padding:28px 20px 80px;}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    border-bottom:1px solid var(--line); padding-bottom:18px; margin-bottom:26px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand-mark{
+    width:44px; height:44px; border:1px solid var(--cyan);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:18px; color:var(--cyan);
+    clip-path:polygon(15% 0,100% 0,100% 85%,85% 100%,0 100%,0 15%);
+    box-shadow:0 0 14px rgba(57,224,255,0.35), inset 0 0 10px rgba(57,224,255,0.15);
+  }
+  .brand h1{
+    font-size:20px; margin:0; letter-spacing:2px; font-weight:600;
+    text-shadow:0 0 12px rgba(57,224,255,0.5);
+  }
+  .brand p{margin:2px 0 0; font-size:11px; letter-spacing:3px; color:var(--text-dim); text-transform:uppercase; font-family:var(--mono);}
+
+  .hdr-actions{display:flex; align-items:center; gap:10px;}
+  .status-pill{
+    font-family:var(--mono); font-size:11px; letter-spacing:1px; padding:7px 12px;
+    border:1px solid var(--line); color:var(--text-dim); display:flex; align-items:center; gap:7px;
+  }
+  .status-pill .dot{width:7px; height:7px; border-radius:50%; background:var(--text-dim);}
+  .status-pill.online .dot{background:var(--green); box-shadow:0 0 8px var(--green);}
+  .status-pill.online{color:var(--green); border-color:rgba(57,255,143,0.4);}
+
+  button{
+    font-family:var(--mono); cursor:pointer; letter-spacing:1px;
+    background:transparent; border:1px solid var(--line-bright); color:var(--cyan);
+    padding:9px 16px; font-size:12px; transition:all .15s ease;
+    clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  }
+  button:hover{background:rgba(57,224,255,0.1); box-shadow:0 0 12px rgba(57,224,255,0.25);}
+  button:active{transform:scale(0.97);}
+  button.primary{border-color:var(--cyan); background:rgba(57,224,255,0.08);}
+  button.danger{border-color:var(--red); color:var(--red);}
+  button.danger:hover{background:rgba(255,59,92,0.1); box-shadow:0 0 12px rgba(255,59,92,0.25);}
+  button.ghost{border-color:var(--line); color:var(--text-dim);}
+  button:disabled{opacity:.35; cursor:not-allowed;}
+  button:disabled:hover{background:transparent; box-shadow:none;}
+
+  .toolbar{display:flex; gap:12px; margin-bottom:22px; flex-wrap:wrap; align-items:center;}
+  input[type=text], input[type=date], textarea, select{
+    background:rgba(13,22,38,0.8); border:1px solid var(--line); color:var(--text);
+    font-family:var(--mono); font-size:13px; padding:9px 12px; outline:none;
+  }
+  input[type=text]:focus, input[type=date]:focus, textarea:focus, select:focus{
+    border-color:var(--cyan); box-shadow:0 0 8px rgba(57,224,255,0.25);
+  }
+  .search-box{flex:1; min-width:180px; display:flex; align-items:center; gap:8px;
+    border:1px solid var(--line); padding:0 12px; background:rgba(13,22,38,0.8);}
+  .search-box input{flex:1; border:none; background:transparent; padding:9px 0;}
+  .search-box .ic{color:var(--text-dim); font-family:var(--mono);}
+
+  .panel{
+    border:1px solid var(--line); background:rgba(10,18,32,0.7);
+    backdrop-filter:blur(2px);
+    position:relative; margin-bottom:16px;
+  }
+  .panel::before{
+    content:""; position:absolute; top:-1px; left:-1px; width:16px; height:16px;
+    border-top:2px solid var(--cyan); border-left:2px solid var(--cyan);
+  }
+  .panel::after{
+    content:""; position:absolute; bottom:-1px; right:-1px; width:16px; height:16px;
+    border-bottom:2px solid var(--cyan); border-right:2px solid var(--cyan);
+  }
+
+  .record{
+    display:grid; grid-template-columns:110px 140px 1fr 1fr auto;
+    gap:14px; padding:16px 20px; border-bottom:1px solid var(--line); align-items:start;
+  }
+  .record:last-child{border-bottom:none;}
+  .record:hover{background:rgba(57,224,255,0.03);}
+  .field-label{font-size:10px; letter-spacing:1.5px; color:var(--text-dim); font-family:var(--mono); margin-bottom:4px; text-transform:uppercase;}
+  .field-val{font-size:13px; word-break:break-word;}
+  .date-val{font-family:var(--mono); color:var(--text-dim);}
+  .mcid-val{font-family:var(--mono); color:var(--cyan); font-weight:600;}
+  .action-chain{display:flex; flex-wrap:wrap; align-items:center; gap:6px; font-family:var(--mono); font-size:12px;}
+  .action-chain .old{color:var(--text-dim); text-decoration:line-through; opacity:.6;}
+  .action-chain .arrow{color:var(--amber);}
+  .action-chain .cur{
+    color:var(--red); border:1px solid rgba(255,59,92,0.4); padding:2px 8px;
+    background:rgba(255,59,92,0.08);
+  }
+  .action-chain .cur.mild{color:var(--amber); border-color:rgba(255,176,32,0.4); background:rgba(255,176,32,0.08);}
+  .row-actions{display:flex; gap:6px; align-items:flex-start;}
+  .row-actions button{padding:6px 10px; font-size:11px;}
+
+  .empty{padding:50px 20px; text-align:center; color:var(--text-dim); font-family:var(--mono); font-size:13px; letter-spacing:1px;}
+
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(2,5,10,0.75); backdrop-filter:blur(3px);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal{
+    background:var(--panel); border:1px solid var(--cyan); max-width:420px; width:100%;
+    padding:26px; position:relative; box-shadow:0 0 40px rgba(57,224,255,0.15);
+  }
+  .modal h2{margin:0 0 6px; font-size:15px; letter-spacing:2px; color:var(--cyan); font-family:var(--mono);}
+  .modal p.sub{margin:0 0 18px; font-size:11px; color:var(--text-dim); letter-spacing:1px;}
+  .form-row{margin-bottom:14px; display:flex; flex-direction:column; gap:6px;}
+  .form-row label{font-size:11px; letter-spacing:1.5px; color:var(--text-dim); font-family:var(--mono); text-transform:uppercase;}
+  .form-row input, .form-row textarea{width:100%;}
+  .form-row textarea{resize:vertical; min-height:60px; font-family:var(--font); font-size:13px;}
+  .modal-actions{display:flex; gap:10px; justify-content:flex-end; margin-top:20px;}
+  .err-msg{font-size:11px; color:var(--red); font-family:var(--mono); margin-top:6px; display:none;}
+  .err-msg.show{display:block;}
+  .close-x{position:absolute; top:14px; right:14px; border:none; background:none; color:var(--text-dim); font-size:16px; padding:4px;}
+  .close-x:hover{color:var(--red); background:none; box-shadow:none;}
+
+  .admin-tag{
+    font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--magenta);
+    border:1px solid var(--magenta); padding:5px 10px; text-transform:uppercase;
+    text-shadow:0 0 8px rgba(255,62,200,0.6);
+  }
+
+  @media(max-width:780px){
+    .record{grid-template-columns:1fr 1fr; grid-template-areas:"date mcid" "content content" "action action" "actions actions";}
+    .record > div:nth-child(1){grid-area:date;}
+    .record > div:nth-child(2){grid-area:mcid;}
+    .record > div:nth-child(3){grid-area:content;}
+    .record > div:nth-child(4){grid-area:action;}
+    .record > div:nth-child(5){grid-area:actions;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">麺</div>
+      <div>
+        <h1>処罰記録システム</h1>
+        <p>Meneath // Punishment Registry v1.0</p>
+      </div>
+    </div>
+    <div class="hdr-actions">
+      <div class="status-pill" id="connStatus"><span class="dot"></span><span>接続中...</span></div>
+      <span class="admin-tag" id="adminTag" style="display:none;">ADMIN MODE</span>
+      <button class="ghost" id="loginBtn">管理者ログイン</button>
+      <button class="ghost" id="logoutBtn" style="display:none;">ログアウト</button>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="ic">&gt;</span>
+      <input type="text" id="searchInput" placeholder="MCIDまたは内容で検索...">
+    </div>
+    <button class="primary" id="addBtn" style="display:none;">+ 新規登録</button>
+  </div>
+
+  <div class="panel">
+    <div id="recordList"></div>
+  </div>
+
+</div>
+
+<div class="modal-overlay" id="loginModal">
+  <div class="modal">
+    <button class="close-x" data-close="loginModal">×</button>
+    <h2>ADMIN AUTHENTICATION</h2>
+    <p class="sub">管理者UUIDを入力してください</p>
+    <div class="form-row">
+      <label>UUID</label>
+      <input type="text" id="uuidInput" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+      <div class="err-msg" id="loginErr"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="ghost" data-close="loginModal">キャンセル</button>
+      <button class="primary" id="loginSubmit">認証</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <button class="close-x" data-close="addModal">×</button>
+    <h2>新規処罰登録</h2>
+    <p class="sub">対象プレイヤーの記録を追加します</p>
+    <div class="form-row">
+      <label>日付</label>
+      <input type="date" id="addDate">
+    </div>
+    <div class="form-row">
+      <label>MCID</label>
+      <input type="text" id="addMcid" placeholder="プレイヤー名">
+    </div>
+    <div class="form-row">
+      <label>内容</label>
+      <textarea id="addContent" placeholder="違反内容の詳細"></textarea>
+    </div>
+    <div class="form-row">
+      <label>対処</label>
+      <input type="text" id="addAction" placeholder="例: 永久ban / 3日間ban / 警告">
+    </div>
+    <div class="err-msg" id="addErr"></div>
+    <div class="modal-actions">
+      <button class="ghost" data-close="addModal">キャンセル</button>
+      <button class="primary" id="addSubmit">登録</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <button class="close-x" data-close="editModal">×</button>
+    <h2>対処を変更</h2>
+    <p class="sub" id="editSub">現在の対処内容を新しい内容に変更します</p>
+    <div class="form-row">
+      <label>新しい対処内容</label>
+      <input type="text" id="editAction" placeholder="例: シーズンban">
+    </div>
+    <div class="err-msg" id="editErr"></div>
+    <div class="modal-actions">
+      <button class="ghost" data-close="editModal">キャンセル</button>
+      <button class="primary" id="editSubmit">変更を保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script>
+/* ==============================================================
+   設定: 自分のFirebaseプロジェクト情報とWorker URLに書き換えること
+   ============================================================== */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.firebaseio.com",
+  projectId: "YOUR_PROJECT",
+};
+const AUTH_WORKER_URL = "https://your-worker-subdomain.workers.dev/auth";
+/* ============================================================== */
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+
+let isAdmin = false;
+let records = {};
+let editTargetId = null;
+
+const $ = (id) => document.getElementById(id);
+const recordList = $('recordList');
+const connStatus = $('connStatus');
+
+function openModal(id){ $(id).classList.add('show'); }
+function closeModal(id){ $(id).classList.remove('show'); }
+document.querySelectorAll('[data-close]').forEach(el=>{
+  el.addEventListener('click', ()=>closeModal(el.dataset.close));
+});
+document.querySelectorAll('.modal-overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('show'); });
+});
+
+/* ---------- Firebase接続状態 ---------- */
+firebase.database().ref('.info/connected').on('value', (snap)=>{
+  if(snap.val()===true){
+    connStatus.classList.add('online');
+    connStatus.querySelector('span:last-child').textContent = 'ONLINE';
+  }else{
+    connStatus.classList.remove('online');
+    connStatus.querySelector('span:last-child').textContent = '接続中...';
+  }
+});
+
+/* ---------- 認証状態の監視 ----------
+   セキュリティの要: 管理者かどうかはこのHTML内のフラグでは判定しない。
+   Firebase Realtime Database側のセキュリティルールで
+   auth.uid === 'admin' の書き込みのみ許可しているため、
+   このJSを書き換えて isAdmin=true にしても実際の書き込みは拒否される。
+------------------------------------------------- */
+auth.onAuthStateChanged((user)=>{
+  isAdmin = !!(user && user.uid === 'admin');
+  $('adminTag').style.display = isAdmin ? 'inline-block' : 'none';
+  $('loginBtn').style.display = isAdmin ? 'none' : 'inline-block';
+  $('logoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
+  $('addBtn').style.display = isAdmin ? 'inline-block' : 'none';
+  render();
+});
+
+$('logoutBtn').addEventListener('click', ()=> auth.signOut());
+
+/* ---------- 管理者ログイン(UUID検証はサーバー側のWorkerで実施) ---------- */
+$('loginBtn').addEventListener('click', ()=>{
+  $('uuidInput').value='';
+  $('loginErr').classList.remove('show');
+  openModal('loginModal');
+});
+
+$('loginSubmit').addEventListener('click', async ()=>{
+  const uuid = $('uuidInput').value.trim();
+  const errEl = $('loginErr');
+  if(!uuid){
+    errEl.textContent = 'UUIDを入力してください';
+    errEl.classList.add('show');
+    return;
+  }
+  $('loginSubmit').disabled = true;
+  try{
+    const res = await fetch(AUTH_WORKER_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ uuid })
+    });
+    if(!res.ok){
+      const t = await res.text().catch(()=> '');
+      throw new Error(t || '認証に失敗しました');
+    }
+    const data = await res.json();
+    await auth.signInWithCustomToken(data.token);
+    closeModal('loginModal');
+  }catch(err){
+    errEl.textContent = 'UUIDが正しくないか、認証サーバーに接続できません';
+    errEl.classList.add('show');
+  }finally{
+    $('loginSubmit').disabled = false;
+  }
+});
+
+/* ---------- データ購読 ---------- */
+db.ref('punishments').on('value', (snap)=>{
+  records = snap.val() || {};
+  render();
+});
+
+/* ---------- 一覧描画 ---------- */
+function render(){
+  const q = $('searchInput').value.trim().toLowerCase();
+  const list = Object.entries(records)
+    .map(([id, r])=>({id, ...r}))
+    .filter(r=>{
+      if(!q) return true;
+      return (r.mcid||'').toLowerCase().includes(q) || (r.content||'').toLowerCase().includes(q);
+    })
+    .sort((a,b)=> (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0));
+
+  if(list.length===0){
+    recordList.innerHTML = `<div class="empty">記録がありません</div>`;
+    return;
+  }
+
+  recordList.innerHTML = list.map(r=>{
+    const history = Array.isArray(r.actionHistory) ? r.actionHistory : [];
+    const chain = history.length
+      ? history.map(h=>`<span class="old">${escapeHtml(h)}</span><span class="arrow">→</span>`).join('') +
+        `<span class="cur ${mildClass(r.action)}">${escapeHtml(r.action||'')}</span>`
+      : `<span class="cur ${mildClass(r.action)}">${escapeHtml(r.action||'')}</span>`;
+
+    return `
+    <div class="record" data-id="${r.id}">
+      <div>
+        <div class="field-label">日付</div>
+        <div class="field-val date-val">${escapeHtml(r.date||'-')}</div>
+      </div>
+      <div>
+        <div class="field-label">MCID</div>
+        <div class="field-val mcid-val">${escapeHtml(r.mcid||'-')}</div>
+      </div>
+      <div>
+        <div class="field-label">内容</div>
+        <div class="field-val">${escapeHtml(r.content||'-')}</div>
+      </div>
+      <div>
+        <div class="field-label">対処</div>
+        <div class="action-chain">${chain}</div>
+      </div>
+      <div class="row-actions">
+        ${isAdmin ? `
+          <button class="ghost edit-btn" data-id="${r.id}">変更</button>
+          <button class="danger del-btn" data-id="${r.id}">削除</button>
+        ` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  recordList.querySelectorAll('.edit-btn').forEach(b=>{
+    b.addEventListener('click', ()=> startEdit(b.dataset.id));
+  });
+  recordList.querySelectorAll('.del-btn').forEach(b=>{
+    b.addEventListener('click', ()=> deleteRecord(b.dataset.id));
+  });
+}
+
+function mildClass(action){
+  const a = (action||'').toLowerCase();
+  if(a.includes('警告') || a.includes('シーズン')) return 'mild';
+  return '';
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+$('searchInput').addEventListener('input', render);
+
+/* ---------- 新規登録 ---------- */
+$('addBtn').addEventListener('click', ()=>{
+  $('addDate').value = new Date().toISOString().slice(0,10);
+  $('addMcid').value = '';
+  $('addContent').value = '';
+  $('addAction').value = '';
+  $('addErr').classList.remove('show');
+  openModal('addModal');
+});
+
+$('addSubmit').addEventListener('click', async ()=>{
+  const date = $('addDate').value;
+  const mcid = $('addMcid').value.trim();
+  const content = $('addContent').value.trim();
+  const action = $('addAction').value.trim();
+  const errEl = $('addErr');
+
+  if(!date || !mcid || !content || !action){
+    errEl.textContent = 'すべての項目を入力してください';
+    errEl.classList.add('show');
+    return;
+  }
+  errEl.classList.remove('show');
+  $('addSubmit').disabled = true;
+  try{
+    const ref = db.ref('punishments').push();
+    await ref.set({
+      date, mcid, content, action,
+      actionHistory: [],
+      createdAt: Date.now()
+    });
+    closeModal('addModal');
+  }catch(err){
+    errEl.textContent = '登録に失敗しました(権限がない可能性があります)';
+    errEl.classList.add('show');
+  }finally{
+    $('addSubmit').disabled = false;
+  }
+});
+
+/* ---------- 対処変更 ---------- */
+function startEdit(id){
+  editTargetId = id;
+  const r = records[id];
+  if(!r) return;
+  $('editSub').textContent = `現在: ${r.action || '-'} → 新しい対処内容を入力してください`;
+  $('editAction').value = '';
+  $('editErr').classList.remove('show');
+  openModal('editModal');
+}
+
+$('editSubmit').addEventListener('click', async ()=>{
+  const newAction = $('editAction').value.trim();
+  const errEl = $('editErr');
+  if(!newAction){
+    errEl.textContent = '新しい対処内容を入力してください';
+    errEl.classList.add('show');
+    return;
+  }
+  const r = records[editTargetId];
+  if(!r){ closeModal('editModal'); return; }
+
+  errEl.classList.remove('show');
+  $('editSubmit').disabled = true;
+  try{
+    const history = Array.isArray(r.actionHistory) ? r.actionHistory.slice() : [];
+    history.push(r.action || '');
+    await db.ref('punishments/'+editTargetId).update({
+      action: newAction,
+      actionHistory: history,
+      updatedAt: Date.now()
+    });
+    closeModal('editModal');
+  }catch(err){
+    errEl.textContent = '変更に失敗しました(権限がない可能性があります)';
+    errEl.classList.add('show');
+  }finally{
+    $('editSubmit').disabled = false;
+  }
+});
+
+/* ---------- 削除 ---------- */
+async function deleteRecord(id){
+  if(!confirm('この記録を削除しますか?この操作は取り消せません。')) return;
+  try{
+    await db.ref('punishments/'+id).remove();
+  }catch(err){
+    alert('削除に失敗しました(権限がない可能性があります)');
+  }
+}
+</script>
+</body>
+</html>
