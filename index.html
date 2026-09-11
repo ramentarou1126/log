@@ -285,7 +285,7 @@ const firebaseConfig = {
   databaseURL: "https://loger-fbba4-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "loger-fbba4",
 };
-const AUTH_WORKER_URL = "https://log.hp7vvyvc25.workers.dev";
+const AUTH_WORKER_URL = "https://your-worker-subdomain.workers.dev/auth";
 /* ============================================================== */
 
 firebase.initializeApp(firebaseConfig);
@@ -354,20 +354,43 @@ $('loginSubmit').addEventListener('click', async ()=>{
   }
   $('loginSubmit').disabled = true;
   try{
-    const res = await fetch(AUTH_WORKER_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ uuid })
-    });
+    let res;
+    try{
+      res = await fetch(AUTH_WORKER_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ uuid })
+      });
+    }catch(networkErr){
+      throw new Error('[接続エラー] Workerに届きませんでした。AUTH_WORKER_URLの綴りやCORS(ALLOWED_ORIGIN)設定を確認してください。詳細: ' + networkErr.message);
+    }
+
     if(!res.ok){
       const t = await res.text().catch(()=> '');
-      throw new Error(t || '認証に失敗しました');
+      if(res.status === 401){
+        throw new Error('[401] UUIDが一致しません。Cloudflare側のADMIN_UUID変数を確認してください。');
+      }
+      if(res.status === 500){
+        throw new Error('[500] サーバー内部エラー。FIREBASE_PRIVATE_KEYやFIREBASE_CLIENT_EMAILの値を確認してください。詳細: ' + t);
+      }
+      throw new Error('[' + res.status + '] ' + (t || '認証に失敗しました'));
     }
-    const data = await res.json();
+
+    let data;
+    try{
+      data = await res.json();
+    }catch{
+      throw new Error('[応答エラー] Workerからの返答をJSONとして読み取れませんでした。');
+    }
+
+    if(!data.token){
+      throw new Error('[応答エラー] トークンが返ってきませんでした。');
+    }
+
     await auth.signInWithCustomToken(data.token);
     closeModal('loginModal');
   }catch(err){
-    errEl.textContent = 'UUIDが正しくないか、認証サーバーに接続できません';
+    errEl.textContent = err.message || '認証に失敗しました';
     errEl.classList.add('show');
   }finally{
     $('loginSubmit').disabled = false;
